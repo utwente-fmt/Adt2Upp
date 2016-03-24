@@ -1,0 +1,50 @@
+	<template>
+		<name>AND[%=n %]</name>
+		<parameter>broadcast chan &amp;a[%
+		var abc = "abcdefghijklmnopqrstuvw";
+		for (i : Integer in Sequence{1..n}) {
+			%], broadcast chan &amp;[%=abc.charAt(i) %][%
+		}%]</parameter>
+		<declaration>int n = 0;</declaration>
+		<location id="id0" x="-200" y="0">
+		</location>
+		<location id="id1" x="0" y="0">
+			<committed/>
+		</location>
+		<location id="id2" x="200" y="0">
+		</location>
+		<init ref="id0"/>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="synchronisation" x="85" y="-25">a!</label>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-100" y="-25">n == [%=n %]</label>
+		</transition>
+		[% var b = true; 
+		for (i : Integer in Sequence{1..n}) {
+			var y = ((i+1)/2) *60; 
+			var y2 = y + 15;
+			var y3 = 0;
+			if (b) {
+				y = -y; // Alternating below and above the line
+				y2 = -y2 - 10;
+				y3 = y2 + 25;
+			} else {
+				y3 = y2 - 40;
+			}
+			b = not b;
+			 %]
+		<transition>
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-200" y="[%=y3 %]">[%=abc.charAt(i) %]?</label>
+			<label kind="assignment" x="-215" y="[%=y2 %]">n = n + 1</label>
+			<nail x="[%=-(200 + y) %]" y="[%=y %]"/>
+			<nail x="[%=-(200 - y) %]" y="[%=y %]"/>
+		</transition>
+		[% } %]
+	</template>

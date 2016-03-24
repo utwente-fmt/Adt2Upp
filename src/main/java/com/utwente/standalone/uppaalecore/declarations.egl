@@ -1,0 +1,71 @@
+[%
+import "../eol/expression.eol";
+import "../eol/declarations.eol"; 
+	// DEBUG 	
+	var b = false;
+
+
+if(d.isTypeOf(Uppaal!TypeDeclaration)) {
+	if(d.typeDefinition.isTypeOf(Uppaal!ScalarTypeSpecification)){
+	%]typedef scalar[[%=d.typeDefinition.sizeExpression.text %]];
+		
+		[%
+	} else if (d.typeDefinition.isTypeOf(Uppaal!RangeTypeSpecification)) {
+		var bounds = d.typeDefinition.bounds; 
+		%]typedef int[[%=bounds.lowerBound.toText() %], [%=bounds.upperBound.toText() %]] [%=d.type.name.first() %];
+		
+		[%
+	}
+} else if (d.isTypeOf(Uppaal!DataVariableDeclaration)) {
+	%]
+	
+	[%=d.toText() %]
+	[%	
+} else if (d.isTypeOf(Uppaal!ChannelVariableDeclaration)) {
+	%]
+	
+	[%=d.toText()%]
+	[%
+} else if (d.isTypeOf(Uppaal!ClockVariableDeclaration)) {
+	%][%=d.toText() %];
+	
+	[%
+} else if(d.isTypeOf(Uppaal!FunctionDeclaration)) {
+	var func = d.`function`;
+	%]
+	
+	[%=func.returnType.referredType.type %] [%=func.name %]([%
+    	var first = true;
+		for (p in func.parameter) {
+			if(true<>first){%], [%}
+			%][%=p.variableDeclaration.typeDefinition.referredType.type.literal %] [%
+			if (p.callType == Uppaal!CallType#CALL_BY_REFERENCE) {%] &amp;[%} else {%][%=" "%][%}
+			%][%=p.variableDeclaration.variable.name.first() %][%
+			first = false;
+		}
+	%]){
+		[% var block = func.block; 
+			for (bd in block.declarations) {
+				if (bd<>null) {	"Block declarations are not yet implemented".println();	}
+			}
+			
+			for (bs in block.statement) {
+				if(bs.isTypeOf(Uppaal!ExpressionStatement)){
+					%][%=bs.expression.toText()%];
+					[%
+				} else{
+					%]// Unimplemented statement: [%=bs.type %][%
+				}
+			}
+		
+		
+		
+		%]
+	}
+	[%
+} else {
+	%]// - Unmatched Declaration [%=d.type().name %];
+	
+	[%
+}
+%]

@@ -1,0 +1,248 @@
+@template
+operation Uppaal!AssignmentExpression toText() : String {
+//if (self.firstExpr.isTypeOf(IdentifierExpression)){
+//self.firstExpr.identifier.println();
+//}
+	var result = self.firstExpr.toText() + " " + self.operator.literal + " " + self.secondExpr.toText();
+	return result;
+}
+@template
+operation Uppaal!CompareExpression handleCompareExpression() : String {
+	var result = self.firstExpr.toText();
+	result = result + " " + self.getOperator() + " ";
+	result = result + self.secondExpr.toText();
+	return result;
+}
+@template
+operation Uppaal!BinaryExpression operator() : String {
+	return self.operator.toString();
+}
+
+@template
+operation Uppaal!FunctionCallExpression toText() : String {
+	var argList = new List;
+	for (arg in self.argument) {
+		argList.add(arg.toText());
+	}
+	return (self.`function`.name + "(" + argList.concat(", ") + ")");
+}
+
+/** Prioity determined as on 
+  * http://www.uppaal.com/index.php?sida=217&rubrik=101#Expressions 
+  */
+@template
+operation Uppaal!Expression priority() : Integer {
+	var result = 0;
+	if (self.isKindOf(Uppaal!QuantificationExpression)) {
+		return result;
+	}
+	result = result + 1;
+	if (self.isKindOf(Uppaal!LogicalExpression)) {
+		switch (self.operator) {
+		case Uppaal!LogicalOperator#OR:
+		case Uppaal!LogicalOperator#IMPLY:
+			return result;
+		case Uppaal!LogicalOperator#AND:
+			return result + 1;
+		default:
+			throw "Unexpected logical operator {}".format(self.operator);
+		}
+	}
+	result = result + 2;
+	if (self.isKindOf(Uppaal!NegationExpression)) {
+		return result;
+	}
+	result = result + 1;
+	if (self.isKindOf(Uppaal!AssignmentExpression)) {
+		return result;
+	}
+	result = result + 1;
+	if (self.isKindOf(Uppaal!ConditionExpression)) {
+		return result;
+	}
+	result = result + 1;
+	// syntax || and && not distinguished from or/and
+	result = result + 2;
+	if (self.isKindOf(Uppaal!BitwiseExpression)) {
+		switch (self.operator) {
+		case Uppaal!BitwiseOperator#OR:
+			return result;
+		case Uppaal!BitwiseOperator#XOR:
+			return result + 1;
+		case Uppaal!BitwiseOperator#AND:
+			return result + 2;
+		default:
+			throw "Unexpected bitwise operator {}".format(self.operator);
+		}
+	}
+	result = result + 3;
+	if (self.isKindOf(Uppaal!CompareExpression)) {
+		switch (self.operator) {
+		case Uppaal!CompareOperator#EQUAL:
+		case Uppaal!CompareOperator#UNEQUAL:
+			return result;
+		case Uppaal!CompareOperator#GREATER_OR_EQUAL:
+		case Uppaal!CompareOperator#GREATER:
+		case Uppaal!CompareOperator#LESS_OR_EQUAL:
+		case Uppaal!CompareOperator#LESS:
+			return result + 1;
+		default:
+			throw "Unexpected comparison operator {}".format(self.operator);
+		}
+	}
+	result = result + 2;
+	if (self.isKindOf(Uppaal!MinMaxExpression)) {
+		return result;
+	}
+	result = result + 1;
+	if (self.isKindOf(Uppaal!BitShiftExpression)) {
+		return result;
+	}
+	result = result + 1;
+	if (self.isKindOf(Uppaal!ArithmeticExpression)) {
+		switch(self.operator) {
+		case Uppaal!ArithmeticOperator#ADD:
+		case Uppaal!ArithmeticOperator#SUBTRACT:
+			return result;
+		case Uppaal!ArithmeticOperator#DIVIDE:
+		case Uppaal!ArithmeticOperator#MODULO:
+		case Uppaal!ArithmeticOperator#MULTIPLICATE:
+			return result + 1;
+		default:
+			throw "Unexpected arithmetic operator {}".format(self.operator);
+		}
+	}
+	result = result + 2;
+	if (self.isKindOf(Uppaal!IncrementDecrementExpression)
+	    or self.isKindOf(Uppaal!MinusExpression)
+	    or self.isKindOf(Uppaal!PlusExpression)) {
+		return result;
+	}
+	result = result + 1;
+	return result;
+}
+
+/** Association determined as on 
+  * http://www.uppaal.com/index.php?sida=217&rubrik=101#Expressions 
+  */
+@template
+operation Uppaal!Expression assocRight() : Boolean {
+	return
+		self.isKindOf(Uppaal!NegationExpression) 
+		or self.isKindOf(Uppaal!AssignmentExpression) 
+		or self.isKindOf(Uppaal!ConditionExpression) 
+		or self.isKindOf(Uppaal!IncrementDecrementExpression)
+	    or self.isKindOf(Uppaal!MinusExpression)
+	    or self.isKindOf(Uppaal!PlusExpression);
+}
+
+/** Returns the textual representation of this expression,
+  * with surrounding parentheses if the context priority is higher
+  * than the priority of this expression.
+  */
+@template
+operation Uppaal!Expression toText(contextPrio : Integer) : String {
+	if (contextPrio > self.priority()) {
+		return "(" + self.toText() + ")";
+	} else {
+		return self.toText();
+	}
+}
+@template
+operation Uppaal!BinaryExpression operator() : String {
+	return self.operator.toString();
+}
+
+@template
+operation Uppaal!BinaryExpression toText() : String {
+	var result = "";
+	var leftPrio : Integer;
+	var rightPrio : Integer;
+	if (self.assocRight()) {
+		leftPrio = self.priority() + 1;
+		rightPrio = self.priority();
+	} else {
+		leftPrio = self.priority();
+		rightPrio = self.priority() + 1;
+	}
+	result = self.firstExpr.toText(leftPrio);
+	result = result + " " + self.operator() + " ";
+	result = result + self.secondExpr.toText(rightPrio);
+	return result;
+}
+
+@template
+operation Uppaal!ConditionExpression toText() : String {
+	var result = "";
+	var selfPrio = self.priority();
+	result = result + self.ifExpression.toText(selfPrio + 1) + " ? ";
+	result = result + self.thenExpression.toText(selfPrio + 1) + " : ";
+	result = result + self.elseExpression.toText(selfPrio);
+	return result;
+}
+
+@template
+operation Uppaal!FunctionCallExpression toText() : String {
+	var argList = new List;
+	for (arg in self.argument) {
+		argList.add(arg.toText());
+	}
+	return self.`function`.name + "(" + argList.concat(", ") + ")";
+}
+
+@template
+operation Uppaal!IdentifierExpression toText() : String {
+	var result ="";
+	
+	if (self.identifier <> null) {
+		result = self.identifier.name;
+		for (i in self.index) {
+			result = result + "[" + i.toText() + "]";
+		}
+	} 
+	return result;
+}
+
+@template
+operation Uppaal!IncrementDecrementExpression toText() : String {
+	var selfPrio = self.priority();
+	if (self.position == Uppaal!IncrementDecrementPosition#PRE) {
+		return self.operator.toString()
+			 + self.expression.toText(selfPrio);
+	} else {	
+		return self.expression.toText(selfPrio + 1)
+			 + self.operator.toString();
+	}
+}
+
+@template
+operation Uppaal!LiteralExpression toText() : String {
+	return self.text;
+}
+
+@template
+operation Uppaal!MinusExpression toText() : String {
+	return "-" + self.invertedExpression.toText(self.priority());
+}
+
+@template
+operation Uppaal!NegationExpression toText() : String {
+	return "not " + self.negatedExpression.toText(self.priority());
+}
+
+@template
+operation Uppaal!PlusExpression toText() : String {
+	return "+" + self.confirmedExpression.toText(self.priority());
+}
+
+@template
+operation Uppaal!QuantificationExpression toText() : String {
+	return self.quantifier.toString() + " " + self.expression.toText(self.priority() + 1);
+}
+
+
+@template
+operation Uppaal!ScopedIdentifierExpression toText() : String {
+	return self.scope.toText(self.priority())
+		 + "." + self.identifier.toText();
+}

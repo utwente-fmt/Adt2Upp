@@ -1,0 +1,38 @@
+	<template>
+		<name>OR[%=n %]</name>
+		<parameter>broadcast chan &amp;a[%
+		var abc = "abcdefghijklmnopqrstuvw";
+		for (i : Integer in Sequence{1..n}) {
+			%], broadcast chan &amp;[%=abc.charAt(i) %][%
+		}%]</parameter>
+		<location id="id10" x="400" y="0">
+			<name x="400" y="-35">done</name>
+		</location>
+		<location id="id11" x="200" y="0">
+			<committed/>
+		</location>
+		<location id="id12" x="0" y="0">
+		</location>
+		<init ref="id12"/>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id10"/>
+			<label kind="synchronisation" x="260" y="-25">a!</label>
+		</transition>
+		[% var b = false; 
+		for (i : Integer in Sequence{1..n}) {
+			var y = (i/2) *20; 
+			if (b) {
+				y = -y; // Alternating below and above the line
+			}
+			b = not b;
+			 %]
+		<transition>
+			<source ref="id12"/>
+			<target ref="id11"/>
+			<label kind="synchronisation" x="76" y="[%=(y-20) %]">[%=abc.charAt(i) %]?</label>
+			<nail x="30" y="[%=y %]"/>
+			<nail x="170" y="[%=y %]"/>
+		</transition>
+		[% } %]
+	</template>

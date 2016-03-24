@@ -1,0 +1,11 @@
+[%
+import "../eol/expression.eol";
+import "../eol/declarations.eol";
+
+for (d in system.declaration) { 
+	%][%=d.toText() %]
+	[%
+}
+%]
+
+[%=system.toText() %]

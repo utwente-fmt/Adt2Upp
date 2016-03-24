@@ -1,0 +1,100 @@
+[%
+	import '../eol/expression.eol';
+	import '../eol/declarations.eol';
+	import '../eol/template.eol';
+	// Saving init id
+	var initId = t.init.id;
+	var initName = "";
+	
+	var x_backup = 0;
+	var y_backup = 0;
+	var count = 0;
+%]
+	<template>
+		<name>[%=t.name %]</name>
+   		<parameter>[%
+   		var first = true;
+   		for (p in t.parameter) {
+			if(true<>first){%], [%}
+			%][%=p.variableDeclaration.typeDefinition.referredType.type.literal %] [%
+			if (p.callType == Uppaal!CallType#CALL_BY_REFERENCE) {%] &amp;[%} else {%][%=" "%][%}
+			%][%=p.variableDeclaration.variable.name.first() %][%
+			first = false;
+		}%]</parameter>
+    	<declaration>
+    	[%
+    	if (t.declarations.isDefined()){
+	    	for (d in t.declarations.declaration) {
+	    		if(d <> null) {
+					%]
+					[%=d.toText() %];[%
+				}
+	    	}
+	    }
+    	%]</declaration>
+		[% for (l in t.location ) {
+			var x = 0;
+			var y = 0;
+			if (l.position.isDefined()) {
+				x = l.position.x;
+				y = l.position.y;
+			} else {
+				y_backup = y_backup + 30;
+				if ( l.name.startsWith("Idle") ) {
+					x = -50;
+				} else {
+					if ( l.name.startsWith("InUse") ) {
+						x = 50; 
+					}
+				}
+					y = y_backup;
+			}
+			var id;
+			if (l.name.isDefined()) {
+				id = l.name + "_" + t.name;
+				if (initId.equals(l.id)) initName = id;
+			}%]
+		<location id="[%=id %]" x="[%=x %]" y="[%=y %]">
+			[% if (l.name.isDefined()) { %]
+				<name x="[%=(x+10) %]" y="[%=(y+10) %]">[%=l.name %]</name>
+			[% } %]
+		</location>
+		[% } %]
+		<init ref="[%=initName %]"/>
+		[% for (e in t.edge ) {
+			 %]
+		<transition>
+			<source ref="[%=e.source.name+"_"+ t.name %]"/>
+			<target ref="[%=e.target.name+"_"+ t.name %]"/>
+			[% 
+			if(e.comment.isDefined() and false) { 
+			%]
+			<label kind="comments">[%=e.comment %]</label>
+			[% } 
+			if (e.selection.isDefined()) {
+				var list = new List;
+				for (select in e.selection) {
+					list.add(select.toText());
+				}
+			%]
+			<label kind="select">[%=list.concat(",\n") %]</label>
+			[% }
+			if(e.guard.isDefined()) { 
+			%]
+			<label kind="guard">[%=e.guard.toText() %]</label>
+			[% }  
+			if(e.synchronization.isDefined()) { 
+			%]
+			<label kind="synchronisation">[%=e.synchronization.toText()%] </label>
+			[% }
+			if (e.update.isDefined()) {
+				var list = new List;
+				for (update in e.update) {
+					list.add(update.toText());
+				}
+			%]
+			<label kind="assignment">[%=list.concat(",\n") %]</label>
+			[% } %]
+		</transition>
+		[%} %]</template>
+		

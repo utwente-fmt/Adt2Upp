@@ -1,0 +1,467 @@
+[% 
+	var javaDateBegin = new Native("java.util.Date");
+	System.out.println("> UATMM Model2Text started on: "+ javaDateBegin);
+		
+	var andTemplate : Template := TemplateFactory.load('predefined/ANDTemplate.egl');
+	var orTemplate : Template := TemplateFactory.load('predefined/ORTemplate.egl');
+	var systemTemplate : Template := TemplateFactory.load('predefined/SystemTemplate.egl');
+	var generated : Template := TemplateFactory.load('predefined/generated.egl');
+	var timedBETemplate : Template := TemplateFactory.load('predefined/TimedBETemplate.egl');
+	var expBETemplate : Template := TemplateFactory.load('predefined/ExpBETemplate.egl');
+	var timedCBETemplate : Template := TemplateFactory.load('predefined/TimedCBETemplate.egl');
+	var expCBETemplate : Template := TemplateFactory.load('predefined/ExpCBETemplate.egl');
+
+	
+  	var ElementId2LeafId : Map;
+  	var LeafId2ElementId : Map;
+  	var id = 0;
+  	for(n in AT!Node.allInstances().select(n|n.Children.size() == 0)) {
+  		ElementId2LeafId.put(n.Label, id);
+  		LeafId2ElementId.put(id, n.Label);
+		id = id + 1;
+	}
+  	
+  	var domain2type = initDomainType();
+  	var domain2initValue = initDomainInitValue();
+  	var domain2metaDomain : Map;
+	
+	
+	var channelsUsed : Sequence;
+	var namesUsed : Sequence;
+	
+	//
+	var andTemplatesIncluded : Sequence;
+	var orTemplatesIncluded : Sequence;
+	
+	
+%]<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>
+[%=generated.process()%]
+// Broadcast channels.
+broadcast chan [% var b : Boolean = false;
+for( n in AT!Node.allInstances.select(n | (n.Role.RoleDescription == "Attack" or n.Children.size() == 0))) {
+if (channelsUsed.indexOf(n.getConvertedLabel()) == -1) {
+	channelsUsed.add(n.getConvertedLabel());
+	if(b){%], [% } else {b = true; } 
+	%][%=n.getConvertedLabel() %]_success[% }} %];
+
+// Global Booleans
+bool f = false;
+bool t = true;
+bool system_done = false;
+bool system_busy = false;
+
+[% 
+
+  	var domains : Sequence;
+  	var domains_stripped : Sequence;
+  	for(d in AT!Domain.allInstances()) { 
+		domains.add(d.ID);
+		
+  		var id_stripped = d.ID.replaceAll("\\d","");
+		domain2metaDomain.put(id, id_stripped);
+		if(domains_stripped.indexOf(id_stripped) == -1) {
+			domains_stripped.add(id_stripped);
+		}
+  	}
+  	
+	// Timed or Distribution based
+	var timed = ((domains_stripped.indexOf("MinTimeSeq") <> -1) or (domains_stripped.indexOf("MinTimePar") <> -1 ));
+  	var timed_domains : Sequence;
+	for ( d in domains ) {
+  		if(d.startsWith("MinTimePar") or d.startsWith("MinTimeSeq")) {
+  			timed_domains.add(d);
+  		}
+  	}
+  	(">> # of timed domains: "+timed_domains.size()).println();
+  	var min_domain;
+  	var max_domain;
+  	if (timed_domains.size() == 2) {
+  		var first_value; 
+  		var second_value;
+	  	// get the all the attributes of the first leaf, based on this decide which domain is min / max
+		for ( att in getATNode(LeafId2ElementId.get(LeafId2ElementId.keySet().first())).Attributes){
+			if (timed_domains.indexOf(att.Domain.ID) == 0) {
+	  			first_value = att.Value.asReal().floor();	
+	  		}
+	  		if (timed_domains.indexOf(att.Domain.ID) == 1) {
+	  			second_value = att.Value.asReal().floor();	
+	  		}
+		}
+		if (first_value < second_value) {
+			min_domain = timed_domains.at(0);
+			max_domain = timed_domains.at(1);
+		} else {
+			min_domain = timed_domains.at(1);
+			max_domain = timed_domains.at(0);
+		}
+	} else if (timed_domains.size() == 1) {
+			min_domain = timed_domains.at(0);
+			max_domain = timed_domains.at(0);
+	}
+  	
+  	
+  	if ((domains_stripped.indexOf("DiffLMH") <> -1) or (domains_stripped.indexOf("DiffLMHE") <> -1 )){
+		%] // Values for LMHE domain:"
+const int L = 1; // Low"
+const int M = 2; // Medium
+const int H = 3; // High
+const int E = 4; // Extreme
+
+		[%
+	}
+	
+	for ( d in domains ) {
+	
+		var str_d = d.replaceAll("\\d","");
+		
+		if (not domain2type.containsKey(str_d) ) ("Couldn't match domain ["+d+"]").println;
+		else { 
+			%][%=domain2type.get(str_d) %] result_[%=d %] = [%=domain2initValue.get(str_d) %];
+			
+			[%  
+		}
+	}
+	
+	for ( d in domains ) {
+		var str_d = d.replaceAll("\\d","");
+		if (not domain2type.containsKey(str_d) ) ("Couldn't match domain ["+str_d+"]").println;
+		else if (d.startsWith("MinTime")) {
+		} else {
+			%][%=domain2type.get(str_d) %] [%=d %][[%=LeafId2ElementId.size() %]] = {[%
+			
+			var first = true;
+			for( key in LeafId2ElementId.keySet() ) {
+				for ( att in getATNode(LeafId2ElementId.get(key)).Attributes){
+					if (first) {
+						if (att.Domain.ID.equals(d)) {
+							first = false;
+							if  (str_d.equals("ProbSucc")) {
+						 		%][%=(1000*att.Value).floor() %][%
+						 	} else {
+						 		%][%=(att.Value) %][%
+						 	}
+						}
+					} else {
+						if (att.Domain.ID.equals(d)) {
+							if  (str_d.equals("ProbSucc")) {
+								var newVar = ((1000*att.Value).floor());
+						 		%], [%=newVar %][%
+						 	} else {
+						 		%], [%=(att.Value) %][%
+						 	}
+						}
+					}
+					
+				}
+			}
+			%]};
+			
+			[%
+		} 
+	}
+	
+	
+	var str_d : String;
+	for ( d in domains ) {
+		if (d.startsWith("DiffLMH")) {
+			%]
+void handle[%=d %](int value) { 
+	if ([%=d %][value] > result_[%=d %]) {
+	 	result_[%=d %] = [%=d %][value]; 
+	 }
+}
+		
+		[%
+		} else if  (d.startsWith("MinCost") or d.startsWith("MinSkill")){
+		%]
+void handle[%=d %](int value) { 
+	result_[%=d %] = result_[%=d %] + [%=d %][value]; 
+}
+		[%
+		} else if  (d.startsWith("SatScenario") or d.startsWith("SatProp")){
+		%]
+void handle[%=d %](int value) { 
+	result_[%=d %] = result_[%=d %] and [%=d %][value]; 
+}
+		
+		[%
+	} else if  (d.startsWith("ProbSucc")){
+		%]
+void handle[%=d %](int value) { 
+	result_[%=d %] = (result_[%=d %] * [%=d %][value])/1000; 
+}
+		
+		[%
+	}
+	}
+	
+
+%]
+
+
+	</declaration>
+[%
+var nodes : Sequence;
+nodes =  AT!Node.allInstances().select(n|n.Children.size() <> 0 and (n.Connector.isTypeOf( AT!AND ) or n.Connector.isTypeOf( AT!PAND)));
+for(n in nodes) { 
+if (andTemplatesIncluded.indexOf(n.Children.size()) == -1 ) {
+	andTemplate.populate('n', n.Children.size());%]
+[%=andTemplate.process()%]
+[% andTemplatesIncluded.add(n.Children.size());
+} } %]
+[%
+var nodes : Sequence;
+nodes =  AT!Node.allInstances().select(n|n.Children.size() <> 0 and n.Connector.isTypeOf( AT!OR ));
+for(n in nodes) { 
+if (orTemplatesIncluded.indexOf(n.Children.size()) == -1 ) {
+	orTemplate.populate('n', n.Children.size());%]
+[%=orTemplate.process()%]
+[% orTemplatesIncluded.add(n.Children.size());
+} } 
+if(timed) { 
+	timedBETemplate.populate('domains', domains);
+	%][%=timedBETemplate.process() %][%
+	if (AT!Node.allInstances().select(n|n.Connector.isTypeOf(AT!PAND)).size() <> 0) {
+		timedCBETemplate.populate('domains', domains);
+		%][%=timedCBETemplate.process() %][%
+	}
+} else { 
+	expBETemplate.populate('domains', domains);
+	%][%=expBETemplate.process() %][%
+	if (AT!Node.allInstances().select(n|n.Connector.isTypeOf(AT!PAND)).size() <> 0) {
+		expCBETemplate.populate('domains', domains);
+		%][%=expCBETemplate.process() %][%
+	}
+}
+%][%=systemTemplate.process() %]
+	<system>
+[%=generated.process()%]
+// Basic Elements
+[% for(n in AT!Node.allInstances().select(n|n.Children.size() == 0)) {
+if (namesUsed.indexOf(n.getConvertedLabel()) == -1) {
+	namesUsed.add(n.getConvertedLabel());
+	if(timed) { 
+		var min = 0;
+		var max = 0;
+		if (timed_domains.size() == 2) {
+			// Model is timed retreiving domain id 
+			for ( att in getATNode(n.Label).Attributes){
+				if (att.Domain.ID.equals(min_domain)) {
+					min = att.Value.asReal().floor();	
+				} else if (att.Domain.ID.equals(max_domain)) {
+					max = att.Value.asReal().floor();	
+				}
+			}
+		} else if (timed_domains.size() == 1) {
+			for ( att in getATNode(n.Label).Attributes){
+				if (att.Domain.ID.equals(min_domain)) {
+					min = att.Value.asReal().floor();
+					max = att.Value.asReal().floor() + 1;		
+				}
+			}
+		}
+		var leftSibling = n.getLeftSiblingsActivator();
+		if (leftSibling.equals("")) {
+			%]d_[%=n.getConvertedLabel() %] = TimedBE([%=n.getConvertedLabel() %]_success, [%=min %], [%=max %], [%=ElementId2LeafId.get(n.Label) %]);[%
+		} else {
+			%]d_[%=n.getConvertedLabel() %] = TimedCBE([%=n.getConvertedLabel() %]_success, [%=leftSibling %]_success, [%=min %], [%=max %], [%=ElementId2LeafId.get(n.Label) %]);[%
+		}
+	} else { 
+		var leftSibling = n.getLeftSiblingsActivator();
+		if (leftSibling.equals("")) {
+			%]d_[%=n.getConvertedLabel() %] = ExpBE([%=n.getConvertedLabel() %]_success, 0.5, [%=ElementId2LeafId.get(n.Label) %]);[% 
+		} else {
+			%]d_[%=n.getConvertedLabel() %] = ExpCBE([%=n.getConvertedLabel() %]_success, [%=leftSibling %]_success, [%=min %], [%=max %], [%=ElementId2LeafId.get(n.Label) %]);[%
+		}
+	}
+} %]
+
+[% } %]
+
+// AND gates
+[% for(n in AT!Node.allInstances().select(n|n.Children.size() <> 0 and ( n.Connector.isTypeOf( AT!AND ) or n.Connector.isTypeOf( AT!PAND ) ) ) ) {
+if (namesUsed.indexOf(n.getConvertedLabel()) == -1) {
+	namesUsed.add(n.getConvertedLabel()); %]
+d_[%=n.getConvertedLabel() %] = AND[%=n.Children.select(c | c.Role.RoleDescription == "Attack").size() %]([%=n.getConvertedLabel() %]_success[% for(c in n.Children.select(c | c.Role.RoleDescription == "Attack")) { %], [%=c.getConvertedLabel() %]_success[% } %]);
+[% }
+} %]
+
+// OR gates
+[% for(n in AT!Node.allInstances().select(n|n.Children.size() <> 0 and n.Connector.isTypeOf( AT!OR ))) {
+if (namesUsed.indexOf(n.getConvertedLabel()) == -1) {
+	namesUsed.add(n.getConvertedLabel()); %]
+d_[%=n.getConvertedLabel() %] = OR[%=n.Children.select(c | c.Role.RoleDescription == "Attack").size() %]([%=n.getConvertedLabel() %]_success[% for(c in n.Children.select(c | c.Role.RoleDescription == "Attack")) { %], [%=c.getConvertedLabel() %]_success[% } %]);
+[% }
+} %]
+
+Sys = System([%=AT!AttackTree.allInstances().first().Root.getConvertedLabel() %]_success);
+
+// System
+system Sys[%
+for(n in namesUsed) {
+%], d_[%=n %][%
+}
+%];</system>
+</nta>
+[%
+	var javaDateEnd = new Native("java.util.Date");
+	System.out.println("> UATMM Model2Text finished on: "+ javaDateEnd);
+	var elapsed = javaDateEnd.getTime() - javaDateBegin.getTime();
+	var minutes = elapsed / 60000;
+	var rest = elapsed.mod(60000);
+	var seconds = rest / 1000;
+	var mili = rest.mod(1000);
+	System.out.print("> Time elapsed: ");
+	if (minutes <> 0) System.out.print( minutes + " min, ");
+	if (seconds <> 0) System.out.print( seconds + " sec : ");
+	System.out.println( mili+ " ms" );
+	
+	operation Any getConvertedLabel() : String {
+		return self.Label.replace(" ", "_");
+	}
+	
+	operation Integer mod(i : Integer) {
+		return self - (self/i * i);
+	}
+	
+
+	// Domain Information
+	operation Any initDomainType() : Map {
+	
+  		var domain2type : Map;
+  		
+	  	domain2type.put("DiffLMH","int");
+	  	domain2type.put("DiffLMHE","int");
+	  	domain2type.put("MinCost","int");
+	  	domain2type.put("MinSkill","int");
+	  	domain2type.put("MinTimePar","double");
+	  	domain2type.put("MinTimeSeq","double");
+	  	domain2type.put("PowerCons","double");
+	  	domain2type.put("ProbSucc","int");
+	  	domain2type.put("ReachPar","int");
+	  	domain2type.put("ReachSeq","int");
+	  	domain2type.put("SatOpp","bool");
+	  	domain2type.put("SatProp","bool");
+	  	domain2type.put("SatScenario","bool");
+	  	
+	  	return domain2type;
+	}
+	  	
+	operation Any initDomainInitValue() : Map {
+	
+  		var domain2initValue : Map;
+  		
+	  	domain2initValue.put("DiffLMH","L");
+	  	domain2initValue.put("DiffLMHE","L");
+	  	domain2initValue.put("MinCost",0);
+	  	domain2initValue.put("MinSkill",0);
+	  	domain2initValue.put("MinTimePar",0.0);
+	  	domain2initValue.put("MinTimeSeq",0.0);
+	  	domain2initValue.put("PowerCons",0.0);
+	  	domain2initValue.put("ProbSucc",1000);
+	  	domain2initValue.put("ReachPar",0);
+	  	domain2initValue.put("ReachSeq",0);
+	  	domain2initValue.put("SatOpp","true");
+	  	domain2initValue.put("SatProp","true");
+	  	domain2initValue.put("SatScenario","true");
+	  	
+	  	return domain2initValue;
+	}
+	
+	operation Any initIdMap(){
+	
+	}
+	
+	// Returns an ATNode, based on its label
+	operation Any getATNode(target : String) : AT!Node {
+		var nodes = AT!Node.allInstances.select(n|n.Children.size() == 0);
+		for(node in nodes) {
+			if(target.equals(node.Label)) return node;
+		}
+		return null;
+	}
+	
+	operation AT!Node getLeftSiblingsActivator() : String {
+		// If there is no PAND gate
+		if ( AT!Node.allInstances().select( n | n.Connector.isTypeOf( AT!PAND ) ).size() == 0 ) {
+			return "";
+		} else if ( not self.hasPandAncestor() ) {
+			return "";
+		} else {
+			var result = self.getLeftSiblingsActivatorHelper();
+			if ( result.equals("LEFT") ) { return ""; }
+			return result;
+		}	
+	}
+	
+	// Possible infite loop, if a node has itself as a parent or ancestor. 
+	// The EVL constraints should prevent this.
+	operation AT!Node hasPandAncestor() : Boolean {
+		if ( self.Parents.size() == 0 ) {
+			return false;
+		} else if ( self.Parents.select( n | n.Connector.isTypeOf( AT!PAND )).size() > 0 ) {
+			return true;
+		} else {
+			var result = false;
+			for ( n in self.Parents ) {
+				if (n.hasPandAncestor()) {
+					result = true;
+				}
+			}
+			return result;	
+		}
+	}
+	
+	// @return a sequence of all the first encountered PANDs
+	operation AT!Node getFirstPandAncestor() : Sequence {
+		var result : Sequence;
+		if ( self.Parents.size() == 0 ) {
+			return result;
+		} else if ( self.Parents.select( n | n.Connector.isTypeOf( AT!PAND )).size() > 0 ) {
+			for ( parent in self.Parents ) {
+				if (parent.Connector.isTypeOf( AT!PAND ) ) {
+					result.add(parent);
+				}
+			}
+			return result;
+		} else {
+			var result = false;
+			for ( n in self.Parents ) {
+				if (n.hasPandAncestor()) {
+					result = true;
+				}
+			}
+			return result;	
+		}
+	}
+	
+	operation AT!Node getLeftSiblingsActivatorHelper() : String {
+		if (self.Parents.size() == 0) {
+			return "";
+		} else {
+			for ( parent in self.Parents ) {
+				if ( parent.Connector.isTypeOf( AT!PAND ) ) {
+					var children = parent.Children;
+					var index = children.indexOf(self).asInteger();
+					if (index == 0) {
+						return "LEFT";
+					} else {
+						return children.at(index - 1).getConvertedLabel();
+					}
+				}
+			}
+			for ( parent in self.Parents ) {
+				var result = parent.getLeftSiblingsActivatorHelper();
+				if (not result.equals("")) { return result; }
+			}
+			// Finally since nothing was found
+			return "";
+		}
+	
+	}
+	   
+	  
+	%]

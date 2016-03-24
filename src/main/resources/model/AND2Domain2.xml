@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<adtree>
+  <node refinement="conjunctive">
+    <label>Root</label>
+    <node refinement="disjunctive">
+      <label>N_2</label>
+      <parameter domainId="DiffLMH1">L</parameter>
+      <parameter domainId="SatProp2">false</parameter>
+    </node>
+    <node refinement="disjunctive">
+      <label>N_3</label>
+      <parameter domainId="DiffLMH1">H</parameter>
+      <parameter domainId="SatProp2">true</parameter>
+    </node>
+  </node>
+  <domain id="DiffLMH1">
+    <class>lu.uni.adtool.domains.predefined.DiffLMH</class>
+    <tool>ADTool</tool>
+  </domain>
+  <domain id="SatProp2">
+    <class>lu.uni.adtool.domains.predefined.SatProp</class>
+    <tool>ADTool</tool>
+  </domain>
+</adtree>

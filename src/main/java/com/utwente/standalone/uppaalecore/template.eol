@@ -1,0 +1,30 @@
+
+// Template definitions
+
+@template
+operation Uppaal!Synchronization toText() : String {
+	return self.channelExpression.toText() + self.kind.toString();
+	
+}
+
+@template
+operation Uppaal!Selection toText() : String {
+	return self.variable.first().toText() + " : " + self.typeDefinition.toText();
+}
+
+@template
+operation Uppaal!Variable toText() : String {
+	var result = self.name;
+	for (i in self.index) {
+		result = result + "[" + i.toText() + "]";
+	}
+	if (self.initializer.isDefined()) {
+		result = result + " = " + self.initializer.toText();
+	}
+	return result;
+}
+
+@template
+operation Uppaal!TypeReference toText() : String {
+	return self.referredType.name;
+}

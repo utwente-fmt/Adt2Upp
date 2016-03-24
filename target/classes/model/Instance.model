@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="ASCII"?>
+<UATMM:AttackTree xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:UATMM="http://UATMM/1.0" Root="//@Nodes.0">
+  <Nodes Role="//@Roles.0" Children="//@Nodes.1 //@Nodes.2" Label="Root">
+    <Connector xsi:type="UATMM:AND"/>
+  </Nodes>
+  <Nodes Role="//@Roles.0" Parents="//@Nodes.0" Label="N_2">
+    <Connector xsi:type="UATMM:OR"/>
+    <Attributes Value="ACED00057400014C" Domain="//@Domains.0"/>
+    <Attributes Value="ACED000574000566616C7365" Domain="//@Domains.1"/>
+  </Nodes>
+  <Nodes Role="//@Roles.0" Parents="//@Nodes.0" Label="N_3">
+    <Connector xsi:type="UATMM:OR"/>
+    <Attributes Value="ACED000574000148" Domain="//@Domains.0"/>
+    <Attributes Value="ACED000574000474727565" Domain="//@Domains.1"/>
+  </Nodes>
+  <Roles RoleDescription="Attack"/>
+  <Roles RoleType="Counteracting" RoleDescription="Defense"/>
+  <Domains ID="DiffLMH1" Computation="true"/>
+  <Domains ID="SatProp2" Computation="true"/>
+</UATMM:AttackTree>

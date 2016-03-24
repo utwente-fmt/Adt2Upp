@@ -1,0 +1,61 @@
+[% 
+
+	var location = new Native("com.utwente.standalone.Locator");
+	TemplateFactory.setTemplateRoot(location.getURI()+"uppaalecore/");
+	var generated : Template := TemplateFactory.load('generated.egl');
+	var system : Template := TemplateFactory.load('system.egl');
+	var declarations : Template := TemplateFactory.load('declarations.egl');
+	var template : Template := TemplateFactory.load('template.egl');
+	var guard : Template := TemplateFactory.load('guard.egl');
+	
+	var javaDateBegin = new Native("java.util.Date");
+	System.out.println("Code generation started on: "+ javaDateBegin);
+
+%]<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>
+[%=generated.process()%]
+[%
+	for( d in getNTA().globalDeclarations.declaration ) {
+		declarations.populate("d", d);
+		%][%=declarations.process() %][%	
+	}
+%]
+
+	</declaration>	
+[%
+	for (t in Uppaal!Template.allInstances ) {
+		template.populate("declarations", declarations);
+		template.populate("guard", guard);
+		
+		template.populate("t", t);
+		%][%=template.process() %][%
+	}
+%]
+	<system>
+[%=generated.process() %]
+[% system.populate("system",getNTA().systemDeclarations); %]
+[%=system.process() %]
+	</system>
+</nta>
+[%
+	var javaDateEnd = new Native("java.util.Date");
+	System.out.println("Code generation finished on: "+ javaDateEnd);
+	var elapsed = javaDateEnd.getTime() - javaDateBegin.getTime();
+	var minutes = elapsed / 60000;
+	if (elapsed <> 0) System.out.println( "| --------------------- |");
+	if (elapsed <> 0) System.out.println( "| Time elapsed: " +elapsed + " ms");
+	if (elapsed <> 0) System.out.println( "| --------------------- |");
+	
+	@cached
+	operation Any getNTA() : Uppaal!NTA {
+		var ntas = Uppaal!NTA.allInstances;
+		return ntas.first();
+	}
+	
+	@template
+	operation Integer mod(i : Integer) {
+		return self - (self/i * i);
+	}
+	%]

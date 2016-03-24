@@ -1,0 +1,28 @@
+	<template>
+		<name>System</name>
+		<parameter>broadcast chan &amp;a</parameter>
+		<declaration>clock global_clk;</declaration>
+		<location id="id0" x="-200" y="0">
+		</location>
+		<location id="id1" x="0" y="0">
+			<name x="-10" y="25">busy</name>
+		</location>
+		<location id="id2" x="200" y="0">
+			<name x="190" y="25">done</name>
+			<committed/>
+		</location>
+		<init ref="id0"/>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="synchronisation" x="17" y="8">a?</label>
+			<label kind="assignment" x="17" y="-42">system_done := true, 
+system_busy := false</label>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="assignment" x="-180" y="-42">global_clk := 0,
+system_busy := true</label>
+		</transition>
+	</template>

@@ -1,0 +1,110 @@
+[%
+
+if(g.isTypeOf(Uppaal!CompareExpression)) {
+	%][%=g.toText() %][%
+} else {
+	if (g.isTypeOf(Uppaal!CompareExpression)) {
+	} else {
+		%]// - Unmatched Declaration [%=g.type().name %]
+		[%
+	}
+}
+
+@template
+operation Uppaal!BinaryExpression operator() : String {
+	return self.operator.toString();
+}
+
+@template
+operation Uppaal!Expression toText() : String {
+	//if (contextPrio > self.priority()) {
+	//	return "(" + self.toText() + ")";
+	//} else {
+	self.println();
+		return self.toText();
+	//
+}
+
+@template
+operation Uppaal!CompareExpression toText() : String {
+	return self.operator;
+}
+
+@template
+operation Uppaal!BinaryExpression toText() : String {
+	var result = "";
+	
+	result = self.firstExpr.toText();
+	result = result + " " + self.operator() + " ";
+	result = result + self.secondExpr.toText();
+	return result;
+}
+
+@template
+operation Uppaal!FunctionCallExpression toText() : String {
+	var argList = new List;
+	for (arg in self.argument) {
+		argList.add(arg.toText());
+	}
+	return self.`function`.name + "(" + argList.concat(", ") + ")";
+}
+
+@template
+operation Uppaal!IdentifierExpression toText() : String {
+	var result = self.identifier.name;
+	for (i in self.index) {
+		result = result + "[" + i.toText() + "]";
+	}
+	return result;
+}
+
+@template
+operation Uppaal!IncrementDecrementExpression toText() : String {
+	var selfPrio = self.priority();
+	if (self.position == Uppaal!IncrementDecrementPosition#PRE) {
+		return self.operator.toString()
+			 + self.expression.toText(selfPrio);
+	} else {	
+		return self.expression.toText(selfPrio + 1)
+			 + self.operator.toString();
+	}
+}
+
+
+@template
+operation Uppaal!LiteralExpression toText() : String {
+	return self.text;
+}
+
+@template
+operation Uppaal!MinusExpression toText() : String {
+	return "-" + self.invertedExpression.toText(self.priority());
+}
+
+@template
+operation Uppaal!NegationExpression toText() : String {
+	return "not " + self.negatedExpression.toText(self.priority());
+}
+
+@template
+operation Uppaal!PlusExpression toText() : String {
+	return "+" + self.confirmedExpression.toText(self.priority());
+}
+
+@template
+operation Uppaal!QuantificationExpression toText() : String {
+	return self.quantifier.toString() + " " + self.expression.toText(self.priority() + 1);
+}
+
+
+@template
+operation Uppaal!ScopedIdentifierExpression toText() : String {
+	return self.scope.toText(self.priority())
+		 + "." + self.identifier.toText();
+}
+
+//@template
+//operation Uppaal!VariableExpression toText() : String {
+//	return "+" + self.confirmedExpression.toText(self.priority());
+//}
+%]

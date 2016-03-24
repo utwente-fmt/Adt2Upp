@@ -1,0 +1,35 @@
+	<template>
+		<name x="5" y="5">ExpCBE</name>
+		<parameter>broadcast chan &amp;a, broadcast chan &amp;z, double b, int id</parameter>
+		<location id="id0" x="-300" y="0">
+		</location>
+		<location id="id1" x="0" y="0">
+			<label kind="exponentialrate" x="-10" y="34">b</label>
+		</location>
+		<location id="id2" x="250" y="0">
+			<name x="240" y="22">fired</name>
+		</location>
+		<init ref="id0"/>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="-161" y="0">z?</label>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="guard" x="20" y="-34">not system_done</label>
+			<label kind="synchronisation" x="85" y="0">a!</label>
+			<label kind="assignment" x="18" y="20">[%
+				var first = true;
+				for ( d in domains ) {
+					if (not d.startsWith("MinTime")) {
+						if (first) {
+							first = false; 
+						}else { %], [% 
+						} %] handle[%=d %](id) [% 	
+					}
+				}	
+			%]</label>
+		</transition>
+	</template>

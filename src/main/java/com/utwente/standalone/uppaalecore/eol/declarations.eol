@@ -1,0 +1,170 @@
+@template
+operation Uppaal!Declaration toText() : String {
+	return "// Unmatched Declaration ["+self.type().name+"]";
+}
+
+@template
+operation Uppaal!DataVariableDeclaration getPrefix() : String {
+	var result : String = "";
+	if (self.prefix <> Uppaal!DataVariablePrefix#NONE) {
+		result = self.prefix.toString() + " ";
+	}
+	return result;
+}
+
+@template 
+operation Any getType() {
+	var result : String = "";
+	if (self.typeDefinition.isDefined()) {
+		result = self.typeDefinition.referredType.type.literal;
+	}
+	return result;
+}
+
+@template
+operation Uppaal!DataVariableDeclaration toText() : String {
+	var result : String = "";
+	result = result + self.getPrefix();
+	result = result + self.getType();
+	if (self.variable.isDefined()) {
+		result = result + " " + self.variable.name.first();
+		
+		if(self.variable.first().index.isDefined() and self.variable.first().index.size() > 0){
+			result = result + "[";
+			var first = true;
+			for (i in self.variable.index) {
+				for (is in i) {
+					if (first <> true) {result = result + "]["; }
+					result = result + is.toText();
+					first = false;
+				}
+			}
+			result = result + "]";
+		}
+		
+		
+		
+		if (self.variable.initializer.isDefined()) {
+			for (i in self.variable.initializer) {
+				if (i.isTypeOf(Uppaal!ExpressionInitializer)) {
+					result = result + " = " + i.expression.toText();
+				} else if (i.isTypeOf(Uppaal!ArrayInitializer)){
+					result = result + " = " + i.toText();
+				}
+			}
+		}
+	}
+	result = result + ";";
+	return result;
+}
+
+@template
+operation Uppaal!TemplateDeclaration toText() : String {
+	var result = self.declaredTemplate.toComment();
+	var declaredName = self.declaredTemplate.name;
+	var parameters = self.declaredTemplate.parameter;
+	var invokedName = self.declaredTemplate.referredTemplate.name;
+	var arguments = self.argument;
+	result = result + declaredName;
+	if (not parameters.isEmpty()) {
+		var parList = new List;
+		for (par in parameters) {
+			parList.add(par.toText());
+		}
+		result = result + "(" + parList.concat(", ") + ")";
+	}
+	result = result + " = " + invokedName;
+	var argList = new List;
+	for (arg in arguments) {
+		argList.add(arg.toText());
+	}
+	result = result + "(" + argList.concat(", ") + ");";
+	return result;
+}
+
+// Core definitions
+@template
+operation Uppaal!CommentableElement toComment() : String {
+	if (self.comment.isDefined()) {
+		return "// " + self.comment + "\n";
+	} else {
+		return "";
+	}
+}
+
+@template
+operation Uppaal!SystemDeclarations toText() : String {
+	var result = new List;
+	var result_string : String = "";
+	// add the optional progress measure
+	if (self.progressMeasure.isDefined()) {
+		result_string = self.progressMeasure.toText();
+	}
+	// add the system specification
+	var firstInst = true;
+	for (instList in self.system.instantiationList) {
+		var procList = new List;
+		for (templ in instList.template) {
+			procList.add(templ.name);
+		}
+		if (firstInst) {
+			result_string = result_string + "system " + procList.concat(", ");
+			firstInst = false;
+		} else {
+			result_string = result_string + "    > " + procList.concat(", ");
+		}
+	}
+	result_string = result_string + ";";
+	return result_string;
+}
+
+@template
+operation Uppaal!ValueIndex toText() : String {
+	return self.sizeExpression.toText();
+}
+
+@template
+operation Uppaal!ChannelVariableDeclaration toText() : String {
+	var result : String = "";
+	if (self.urgent) { 
+		result = result + "urgent";
+	}
+	if (self.broadcast) { 
+		result = result + " broadcast";
+	}
+	result = result + " chan";
+	result = result + " " + self.variable.name.first();
+	if (self.variable.index.isDefined()) { 
+		result = result + "[";
+		var first = true;
+		for (i in self.variable.index) {
+			for (is in i) {
+				if (first <> true) {result = result + "]["; }
+				result = result + is.toText();
+				first = false;
+			}
+		}
+		result = result + "]";
+	}
+	result = result + ";";
+	return result;	
+}
+
+@template
+operation Uppaal!ClockVariableDeclaration toText() : String {
+	return "clock " + self.variable.name.first();
+}
+
+@tempalte
+operation Uppaal!ArrayInitializer toText() : String {
+	var subInit = new List;
+	for (i in self.initializer) {
+		subInit.add(i.toText());
+	}
+	return "{ " + subInit.concat(", ") + " }";
+}
+
+@template
+operation Uppaal!ExpressionInitializer toText() : String {
+	return self.expression.toText();
+}
